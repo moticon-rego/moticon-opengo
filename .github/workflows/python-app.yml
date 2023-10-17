@@ -32,7 +32,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
-    - name: Archive code coverage results
+    - name: Archive gait_analysis.png
       uses: actions/upload-artifact@v3
       with:
         name: gait_analysis.png
