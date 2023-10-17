@@ -63,10 +63,14 @@ class TestOpenGo(unittest.TestCase):
         by_label = dict(zip(labels, handles))
         plt.legend(by_label.values(), by_label.keys())  # Avoid legend entry per curve
         outfile = os.path.join(self.testdir, "gait_analysis.png")
+        golden_result = os.path.join(self.testdir, "golden_gait_analysis.png")
         plt.savefig(outfile)
-        self.assertTrue(
-            filecmp.cmp(outfile, os.path.join(self.testdir, "golden_gait_analysis.png"))
-        )
+        print(outfile)
+        print(golden_result)
+
+        self.assertTrue(os.path.exists(outfile))
+        self.assertTrue(os.path.exists(golden_result))
+        self.assertTrue(filecmp.cmp(outfile, golden_result))
 
 
 if __name__ == "__main__":
