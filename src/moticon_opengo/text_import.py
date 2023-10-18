@@ -1,9 +1,10 @@
-from datetime import datetime
-from enum import Enum
-import numpy as np
 import os
 import re
+from datetime import datetime
+from enum import Enum
 from typing import Dict, List, Optional, Union
+
+import numpy as np
 
 
 class TextExportFileIterator:

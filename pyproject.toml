@@ -32,8 +32,5 @@ path = "src/moticon_opengo/__about__.py"
 test = "pytest {args:tests}"
 
 [project.optional-dependencies]
-dev = ["black"]
-test = [
-  "matplotlib",
-  "pytest",
-]
+dev = ["black", "ruff"]
+test = ["matplotlib", "pytest"]

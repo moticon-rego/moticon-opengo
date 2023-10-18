@@ -1,10 +1,12 @@
-import unittest
-import matplotlib.pyplot as plt
-import numpy as np
 import os
+import unittest
 from datetime import datetime
 from typing import List
-from moticon_opengo.text_import import TextExportFileIterator, Measurement
+
+import matplotlib.pyplot as plt
+import numpy as np
+from moticon_opengo.text_import import Measurement, TextExportFileIterator
+
 # import filecmp
 
 dir = os.path.dirname(os.path.abspath(__file__))
