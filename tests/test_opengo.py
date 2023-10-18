@@ -4,8 +4,8 @@ import numpy as np
 import os
 from datetime import datetime
 from typing import List
-from moticon_opengo import TextExportFileIterator, Measurement
-import filecmp
+from moticon_opengo.text_import import TextExportFileIterator, Measurement
+# import filecmp
 
 dir = os.path.dirname(os.path.abspath(__file__))
 
