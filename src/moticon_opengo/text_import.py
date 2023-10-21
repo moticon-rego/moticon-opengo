@@ -138,7 +138,7 @@ class Measurement(object):
         self.extra_data: Dict[str, np.ndarray] = dict()
         self.sides: List[Side] = list()
         self.side_data: Dict[Side, SideData] = dict()
-        self.steps: Optional[StepIterator] = StepIterator()
+        self.steps: StepIterator = StepIterator()
         self._contains_steps_channel: bool = False
         self._first_full_data_column: Dict[Side, int] = dict()
         self._full_data_columns: Dict[Side, List[int]] = dict()
@@ -147,9 +147,7 @@ class Measurement(object):
 
     def _load_data(self):
         self._parse_header()
-        self.data: np.ndarray = np.genfromtxt(
-            self.fname, delimiter="\t", dtype=None, comments="#"
-        )
+        self.data = np.genfromtxt(self.fname, delimiter="\t", dtype=None, comments="#")
         self._apply_trim()
         self._apply_fill_method()
         self._load_channel_data()
@@ -162,24 +160,27 @@ class Measurement(object):
 
                 line = line[2:].strip()
 
+                def strip_name(line):
+                    return line.split(":", maxsplit=1)[-1].strip()
+
                 if line.startswith("Start time:"):
                     self.start_time = datetime.strptime(
                         line[12:], "%d.%m.%Y %H:%M:%S.%f"
                     )
                 elif line.startswith("Duration:"):
-                    self.duration = line.split(":", maxsplit=1)[-1].strip()
+                    self.duration = strip_name(line)
                 elif line.startswith("Sensor insoles:"):
-                    self.serial_numbers = line[16:].split(", ")
+                    self.serial_numbers = strip_name(line).split(", ")
                 elif line.startswith("Size:"):
-                    self.sensor_insole_size = int(line[6:])
+                    self.sensor_insole_size = int(strip_name(line))
                 elif line.startswith("Recording type:"):
-                    self.recording_type = line[16:]
+                    self.recording_type = strip_name(line)
                 elif line.startswith("Name:"):
-                    self.name = line[6:]
+                    self.name = strip_name(line)
                 elif line.startswith("Notes:"):
-                    self.comment = line[7:]
+                    self.comment = strip_name(line)
                 elif line.startswith("Tag:"):
-                    self.tag = line[5:]
+                    self.tag = strip_name(line)
                 else:
                     self.channel_names = line.split("\t")
 
@@ -200,6 +201,9 @@ class Measurement(object):
 
     def _apply_trim(self):
         if not self.trim:
+            return
+
+        if self.data is None:
             return
 
         nan_rows: np.ndarray = np.isnan(

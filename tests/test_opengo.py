@@ -53,8 +53,8 @@ class TestOpenGo(unittest.TestCase):
             for step in meas.steps:
                 h: int = step.heel_strike_idx - 5
                 t: int = step.toe_off_idx + 5
-                time: np.array = meas.time[h:t] - meas.time[h]
-                total_force: np.array = meas.side_data[step.side].total_force[h:t]
+                time: np.ndarray = meas.time[h:t] - meas.time[h]
+                total_force: np.ndarray = meas.side_data[step.side].total_force[h:t]
                 plt.plot(time, total_force, label=meas.tag, color=colors[i])
 
         plt.title("Total force curve of all detected steps")
