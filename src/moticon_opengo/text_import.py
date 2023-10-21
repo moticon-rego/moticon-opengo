@@ -15,6 +15,7 @@ class TextExportFileIterator:
         ]
         self.index: int = 0
         self._check_files()
+        self._sort_files()
 
     def __iter__(self):
         return self
@@ -42,6 +43,9 @@ class TextExportFileIterator:
                 if "# Sensor insoles:" not in f.readline():
                     self.files.remove(fname)
                     continue
+
+    def _sort_files(self):
+        self.files.sort()
 
 
 class Side(Enum):
