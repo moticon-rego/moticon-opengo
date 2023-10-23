@@ -28,57 +28,25 @@ pip install moticon-opengo
 The Moticon-OpenGo library provides functions for processing the data output of
 the [OpenGo Software](https://moticon.com/opengo/software).
 
-### 2.1 Text Export Data
+### Text Export Data
 
-Assume we have a bunch of `.txt` files in our current folder, exported using the
-OpenGo Software's text export:
+Assume we have a bunch of `.txt` files exported from a `.go` file using the
+OpenGo Software's text export. This library allows you to load and process
+these `.txt` files as demonstrated in the example
+`examples/demo_text_export_grf_curves.py`.
 
-```Python
-from moticon_opengo.text_export import FileIterator, Measurement, Side
+### Gait Report Data
 
-for fname in FileIterator("."):
-    meas = Measurement(fname)
-    print(meas.name)
-    print(meas.side_data[Side.LEFT].total_force)
+Assume we have a bunch of `.xlsx` files exported using the OpenGo Software's
+gait report. This library allows you to load and process these files as
+demonstrated in the example `examples/demo_gait_report.py`.
 
-    for step in meas.steps:
-        print(f"step on {step.side} side, detected by the gait report")
-```
-
-### 2.2 Gait Export Data
-
-Assume we have a bunch of `.xlsx` files in our current folder, exported using
-the OpenGo Software's gait report:
-
-```Python
-from moticon_opengo.gait_report import FileIterator, Report
-
-for fname in FileIterator("."):
-    rep = Report(fname)
-    print(rep.load_histogram.values)
-
-for step in rep.steps:
-    print(f"step on {step.side} side, detected by the gait report")
-```
-
-### 2.3 Geometry Information
+### Geometry Information
 
 The library provides sensor insole outline and pressure sensor geometry
-information:
+information, as demonstrated in the example `examples/demo_geometry.py`.
 
-```Python
-from moticon_opengo.text_export import Measurement, Side
-from moticon_opengo.geometry import area_factory, outline, sensor_coordinates, \
-    sensor_areas_cm2
-
-# Force (N) per sensor is pressure (N/cm2) times sensor area (cm2). Gaps in
-# between sensors are compensated by [area_factors].
-force_per_sensor: np.array = \
-    Measurement("export.txt").side_data(Side.LEFT).pressure * \
-    sensor_areas_cm2 * area_factors
-```
-
-### 2.4 Plotting
+### Plotting
 
 The library helps in generating plots using Matplotlib:
 
@@ -92,14 +60,14 @@ This section is for contributors who want to adapt/extend the Moticon-OpenGo
 library. If you only want to make use of Moticon-OpenGo as-is for processing
 your sensor insole data, then you can skip this section.
 
-### 3.1 Build
+### Build
 
 For development, install Moticon-OpenGo as follows:
 ```
 pip install -e ."[test,dev]"
 ```
 
-### 3.2 Testing
+### Testing
 
 To run the tests, make sure you have the package installed with `test` extra
 (see section "Build" above). Run the tests as follows:

@@ -1,31 +1,15 @@
-import os
 import re
 from datetime import datetime
-from enum import Enum
 from typing import Dict, List, Optional, Union
 
 import numpy as np
 
+from moticon_opengo.utils import FileIterator, Side, SideData, Step, StepIterator
 
-class TextExportFileIterator:
+
+class TextExportFileIterator(FileIterator):
     def __init__(self, folder: str):
-        self.folder: str = folder
-        self.files: List[str] = [
-            os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".txt")
-        ]
-        self.index: int = 0
-        self._check_files()
-        self._sort_files()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.index < len(self.files):
-            self.index += 1
-            return os.path.join(self.folder, self.files[self.index - 1])
-
-        raise StopIteration
+        super().__init__(folder, ".txt")
 
     def _check_files(self):
         """
@@ -44,63 +28,13 @@ class TextExportFileIterator:
                     self.files.remove(fname)
                     continue
 
-    def _sort_files(self):
-        self.files.sort()
 
-
-class Side(Enum):
-    LEFT = 1
-    RIGHT = 2
-
-    @property
-    def other(self):
-        if self == Side.LEFT:
-            return Side.RIGHT
-
-        return Side.LEFT
-
-    @staticmethod
-    def from_string(side_string: str):
-        if side_string.lower() == "left":
-            return Side.LEFT
-        elif side_string.lower() == "right":
-            return Side.RIGHT
-
-        return None
-
-
-class Step(object):
+class TextExportStep(Step):
     def __init__(self, side: Side, heel_strike_idx: int, toe_off_idx: int):
-        self.side: Optional[Side] = side
+        super().__init__(side)
+
         self.heel_strike_idx: Optional[int] = heel_strike_idx
         self.toe_off_idx: Optional[int] = toe_off_idx
-
-
-class StepIterator(object):
-    def __init__(self):
-        self.index: int = 0
-        self.steps: List[Step] = list()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.index < len(self.steps):
-            self.index += 1
-            return self.steps[self.index - 1]
-
-        raise StopIteration
-
-
-class SideData(object):
-    def __init__(self, side: Side):
-        self.side: Side = side
-        self.pressure: Optional[np.ndarray] = None
-        self.acceleration: Optional[np.ndarray] = None
-        self.angular: Optional[np.ndarray] = None
-        self.total_force: Optional[np.ndarray] = None
-        self.cop: Optional[np.ndarray] = None
-        self.cop_velocity: Optional[np.ndarray] = None
 
 
 class Measurement(object):
@@ -316,7 +250,7 @@ class Measurement(object):
         toe_off_idx: np.ndarray = np.where(channel_data == toe_off_value)[0]
 
         for h, t in zip(heel_strike_idx, toe_off_idx):
-            self.steps.steps.append(Step(side, h, t))
+            self.steps.steps.append(TextExportStep(side, h, t))
 
     @property
     def has_steps(self) -> bool:
