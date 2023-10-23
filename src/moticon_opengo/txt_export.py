@@ -7,7 +7,7 @@ import numpy as np
 from moticon_opengo.utils import FileIterator, Side, SideData, Step, StepIterator
 
 
-class TextExportFileIterator(FileIterator):
+class TxtExportFileIterator(FileIterator):
     def __init__(self, folder: str):
         super().__init__(folder, ".txt")
 
@@ -29,7 +29,7 @@ class TextExportFileIterator(FileIterator):
                     continue
 
 
-class TextExportStep(Step):
+class TxtExportStep(Step):
     def __init__(self, side: Side, heel_strike_idx: int, toe_off_idx: int):
         super().__init__(side)
 
@@ -250,7 +250,7 @@ class Measurement(object):
         toe_off_idx: np.ndarray = np.where(channel_data == toe_off_value)[0]
 
         for h, t in zip(heel_strike_idx, toe_off_idx):
-            self.steps.steps.append(TextExportStep(side, h, t))
+            self.steps.steps.append(TxtExportStep(side, h, t))
 
     @property
     def has_steps(self) -> bool:

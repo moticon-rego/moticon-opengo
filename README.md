@@ -41,18 +41,6 @@ Assume we have a bunch of `.xlsx` files exported using the OpenGo Software's
 gait report. This library allows you to load and process these files as
 demonstrated in the example `examples/demo_gait_report.py`.
 
-### Geometry Information
-
-The library provides sensor insole outline and pressure sensor geometry
-information, as demonstrated in the example `examples/demo_geometry.py`.
-
-### Plotting
-
-The library helps in generating plots using Matplotlib:
-
-TODO: Return an axis object which already has the sensor insole outline plotted.
-Demo how to plot COP data.
-
 
 ## 3. Library Development
 

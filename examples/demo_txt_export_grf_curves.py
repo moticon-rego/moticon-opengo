@@ -3,7 +3,8 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from moticon_opengo.text_import import Measurement, TextExportFileIterator
+
+from moticon_opengo.txt_export import Measurement, TxtExportFileIterator
 
 
 def main():
@@ -12,7 +13,7 @@ def main():
     )
     colors: List[str] = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 
-    for i, fname in enumerate(TextExportFileIterator(testdata_dir)):
+    for i, fname in enumerate(TxtExportFileIterator(testdata_dir)):
         meas: Measurement = Measurement(fname)
 
         for step in meas.steps:

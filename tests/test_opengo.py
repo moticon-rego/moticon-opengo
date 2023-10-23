@@ -5,7 +5,8 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from moticon_opengo.text_import import Measurement, TextExportFileIterator
+
+from moticon_opengo.txt_export import Measurement, TxtExportFileIterator
 
 # import filecmp
 
@@ -42,9 +43,7 @@ class TestOpenGo(unittest.TestCase):
     def test_import_and_plot_steps(self):
         colors: List[str] = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 
-        for i, fname in enumerate(
-            TextExportFileIterator(os.path.join(dir, "testdata"))
-        ):
+        for i, fname in enumerate(TxtExportFileIterator(os.path.join(dir, "testdata"))):
             meas: Measurement = Measurement(fname)
 
             if not meas.has_step_channel:
