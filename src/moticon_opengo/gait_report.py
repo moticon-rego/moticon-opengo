@@ -1,10 +1,11 @@
+import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Union
 
 import numpy as np
 from openpyxl import load_workbook
 
-from moticon_opengo.utils import FileIterator, Side, Step, StepIterator
+from moticon_opengo.utils import FileIterator, Side, Step, is_not_null
 
 
 class GaitReportFileIterator(FileIterator):
@@ -67,11 +68,17 @@ class GaitReportStep(Step):
             "Initial contact (s)": "time_initial_contact",
             "Toe off (s)": "time_toe_off",
             "Gaitline start x": "gait_line_start_x",
+            "Gaitline start x (%)": "gait_line_start_x",
             "Gaitline start y": "gait_line_start_y",
+            "Gaitline start y (%)": "gait_line_start_y",
             "Gaitline end x": "gait_line_end_x",
+            "Gaitline end x (%)": "gait_line_end_x",
             "Gaitline end y": "gait_line_end_y",
+            "Gaitline end y (%)": "gait_line_end_y",
             "Gaitline length": "gait_line_length",
+            "Gaitline length (%)": "gait_line_length",
             "Gaitline width": "gait_line_width",
+            "Gaitline width (%)": "gait_line_width",
             "First peak (N)": "first_peak",
             "First peak timing (as % of stance)": "first_peak_timing",
             "Second peak (N)": "second_peak",
@@ -92,8 +99,35 @@ class GaitReportStep(Step):
         }
 
     def set_data(self, values: List[Union[int, float]], headers: List[str]):
+        deprecated_field_names: List[str] = [
+            "Gaitline start x (mm)",
+            "Gaitline start y (mm)",
+            "Gaitline end x (mm)",
+            "Gaitline end y (mm)",
+            "Gaitline length (mm)",
+            "Gaitline width (mm)",
+        ]
+
         for v, h in zip(values, headers):
-            setattr(self, self._field_names[h], v)
+            try:
+                setattr(self, self._field_names[h], v)
+            except KeyError:
+                if h not in deprecated_field_names:
+                    raise KeyError(f'The header entry "{h}" is unknown')
+
+    @property
+    def max_peak(self) -> Optional[float]:
+        """
+        From the first and second total force peak, return the larger one.
+        """
+        peaks: List[float] = [
+            x for x in [self.first_peak, self.second_peak] if is_not_null(x)
+        ]
+
+        if peaks:
+            return max(peaks)
+
+        return None
 
 
 class GaitReport(object):
@@ -106,16 +140,17 @@ class GaitReport(object):
     ):
         """
         Represents a gait report result constructed from a spreadsheet export
-        file [fname]. If the filename contains the absolute start time of the
-        data, it can be parsed using [datetime_format].
+        file [fname]. If the file basename character range [start_idx:stop_idx]
+        contains the absolute start time of the data, then it can be parsed
+        using [datetime_format]. The steps will then not only have a time
+        relative to the measurement start, but also an absolute datetime.
         """
         self.fname: str = fname
-
         self.abs_start_time: Optional[datetime] = None
 
         try:
             self.abs_start_time = datetime.strptime(
-                fname[start_idx:stop_idx], datetime_format
+                os.path.basename(fname)[start_idx:stop_idx], datetime_format
             )
         except ValueError:
             pass
@@ -209,7 +244,7 @@ class GaitReport(object):
         self._distance: Optional[np.array] = None
         self._speed: Optional[np.array] = None
 
-        self.steps: StepIterator = StepIterator()
+        self.steps: List[GaitReportStep] = list()
 
         self._define_field_names()
         self._load_data()
@@ -259,7 +294,31 @@ class GaitReport(object):
                         seconds=steps[-1].time_initial_contact
                     )
 
-        self.steps.steps = sorted(steps, key=lambda x: x.time_initial_contact)
+        self.steps = sorted(steps, key=lambda x: x.time_initial_contact)
+
+    @property
+    def has_absolute_time(self) -> bool:
+        return self.abs_start_time is not None
+
+    @property
+    def calendar_days_with_steps(self):
+        if not self.has_absolute_time:
+            return list()
+
+        unique_calendar_days = set()
+
+        for dt in [step.abs_time for step in self.steps]:
+            calendar_day = dt.date()
+            unique_calendar_days.add(calendar_day)
+
+        return list(sorted(list(unique_calendar_days)))
+
+    def steps_of_calendar_day(self, calendar_day):
+        if not self.has_absolute_time:
+            return list()
+
+        steps = list(self.steps)
+        return [step for step in steps if step.abs_time.date() == calendar_day]
 
     @property
     def field_names(self):

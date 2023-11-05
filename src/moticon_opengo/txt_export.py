@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 
-from moticon_opengo.utils import FileIterator, Side, SideData, Step, StepIterator
+from moticon_opengo.utils import FileIterator, Side, SideData, Step
 
 
 class TxtExportFileIterator(FileIterator):
@@ -51,7 +51,7 @@ class Measurement(object):
         is filled by duplicating the previous sample on the corresponding side;
         with "drop", the entire sample is dropped on both sides; "keep" simply
         keeps the original data including gaps. Caution: The "drop" fill method
-        may also drop step detection events, which affects the [steps] iterator.
+        may also drop step detection events, which affects the [steps] list.
         """
         self.fname: str = fname
         self.trim: bool = trim
@@ -72,7 +72,7 @@ class Measurement(object):
         self.extra_data: Dict[str, np.ndarray] = dict()
         self.sides: List[Side] = list()
         self.side_data: Dict[Side, SideData] = dict()
-        self.steps: StepIterator = StepIterator()
+        self.steps: List[Step] = list()
         self._contains_steps_channel: bool = False
         self._first_full_data_column: Dict[Side, int] = dict()
         self._full_data_columns: Dict[Side, List[int]] = dict()
@@ -250,7 +250,7 @@ class Measurement(object):
         toe_off_idx: np.ndarray = np.where(channel_data == toe_off_value)[0]
 
         for h, t in zip(heel_strike_idx, toe_off_idx):
-            self.steps.steps.append(TxtExportStep(side, h, t))
+            self.steps.append(TxtExportStep(side, h, t))
 
     @property
     def has_steps(self) -> bool:

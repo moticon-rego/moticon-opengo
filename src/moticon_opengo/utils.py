@@ -1,6 +1,6 @@
 import os
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 
@@ -76,17 +76,53 @@ class Step(object):
         self.side: Optional[Side] = side
 
 
-class StepIterator(object):
-    def __init__(self):
-        self.index: int = 0
-        self.steps = list()
+def is_not_null(value) -> bool:
+    """
+    Return True if the [value] is a proper number, not None or NAN.
+    """
+    if value is None:
+        return False
 
-    def __iter__(self):
-        return self
+    if (
+        not isinstance(value, float)
+        and not isinstance(value, np.float32)
+        and not isinstance(value, np.float64)
+    ):
+        return False
 
-    def __next__(self):
-        if self.index < len(self.steps):
-            self.index += 1
-            return self.steps[self.index - 1]
+    if np.isnan(value):
+        return False
 
-        raise StopIteration
+    return True
+
+
+def average_null_safe(
+    a: List[Union[float, None, np.float32, np.float64]],
+    weights: Optional[List[Union[float, None, np.float32, np.float64]]] = None,
+) -> Optional[float]:
+    """
+    Average a list of values, while excluding None values and Numpy nan values.
+    Optionally, compute weighted average using weights.
+    """
+    non_null, non_null_weights = list(), list()
+
+    if weights is None:
+        weights = np.ones(shape=[len(a)])
+
+    for x, w in zip(a, weights):
+        if x is None:
+            continue
+
+        if np.isnan(x):
+            continue
+
+        non_null.append(x)
+        non_null_weights.append(w)
+
+    if non_null:
+        # Note: In np.average(), sum(weights) is rescaled to 1. Consequently,
+        # if a value in 'a' is Null, the weights of the remaining values will
+        # sum up to 1 (as desired). No need to handle this manually here.
+        return np.average(non_null, weights=non_null_weights)
+
+    return None
