@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "moticon_opengo"
+dynamic = ["version"]
+description = "Moticon OpenGo Library"
+authors = [{ name = "Moticon ReGo AG", email = "support@moticon.com" }]
+license = { file = "LICENSE" }
+readme = "README.md"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+]
+requires-python = ">=3.7"
+
+dependencies = ["numpy", "openpyxl", "matplotlib"]
+
+
+[project.urls]
+"Homepage" = "https://github.com/moticon-rego/moticon-opengo"
+"Bug Tracker" = "https://github.com/moticon-rego/moticon-opengo/issues"
+
+
+[tool.hatch.version]
+path = "src/moticon_opengo/__about__.py"
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+
+[project.optional-dependencies]
+dev = ["ruff"]
+test = ["pytest"]
