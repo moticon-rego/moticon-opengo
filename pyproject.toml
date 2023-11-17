@@ -17,7 +17,7 @@ classifiers = [
 ]
 requires-python = ">=3.7"
 
-dependencies = ["numpy", "openpyxl"]
+dependencies = ["numpy", "openpyxl", "matplotlib"]
 
 
 [project.urls]
@@ -32,5 +32,5 @@ path = "src/moticon_opengo/__about__.py"
 test = "pytest {args:tests}"
 
 [project.optional-dependencies]
-dev = ["black", "ruff"]
-test = ["matplotlib", "pytest"]
+dev = ["ruff"]
+test = ["pytest"]
