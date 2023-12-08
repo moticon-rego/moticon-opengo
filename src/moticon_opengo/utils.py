@@ -85,6 +85,7 @@ def is_not_null(value) -> bool:
 
     if (
         not isinstance(value, float)
+        and not isinstance(value, int)
         and not isinstance(value, np.float32)
         and not isinstance(value, np.float64)
     ):
