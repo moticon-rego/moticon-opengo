@@ -16,17 +16,25 @@ class TxtExportFileIterator(FileIterator):
         Plausibility check removing files which are obviously no OpenGo text export
         files.
         """
-        for fname in self.files:
+        for fname in self.files.copy():
+            comment_fields: List[str] = []
+
             with open(fname, "r") as f:
-                if "# Start time:" not in f.readline():
-                    self.files.remove(fname)
-                    continue
-                if "# Duration:" not in f.readline():
-                    self.files.remove(fname)
-                    continue
-                if "# Sensor insoles:" not in f.readline():
-                    self.files.remove(fname)
-                    continue
+                for line in f:
+                    if not line.startswith("#"):
+                        break
+
+                    splits: List[str] = line[1:].strip().split(":", 1)
+
+                    if len(splits) > 1:
+                        comment_fields.append(splits[0])
+
+            if (
+                "Start time" not in comment_fields
+                or "Duration" not in comment_fields
+                or "Sensor insoles" not in comment_fields
+            ):
+                self.files.remove(fname)
 
 
 class TxtExportStep(Step):
