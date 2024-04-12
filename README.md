@@ -35,6 +35,11 @@ OpenGo Software's text export. This library allows you to load and process
 these `.txt` files as demonstrated in the example
 `examples/demo_text_export_grf_curves.py`.
 
+If the measurement contains manually set events, then these events are also
+contained in the text export, and made available by the Python library. The
+example `examples/demo_text_export_events.py` shows how this can be used for
+convenient slicing of measurement data.
+
 ### Gait Report Data
 
 Assume we have a bunch of `.xlsx` files exported using the OpenGo Software's
