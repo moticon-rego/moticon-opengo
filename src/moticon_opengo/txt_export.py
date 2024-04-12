@@ -1,4 +1,5 @@
 import re
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Optional, Union
 
@@ -45,26 +46,20 @@ class TxtExportStep(Step):
         self.toe_off_idx: Optional[int] = toe_off_idx
 
 
+@dataclass
 class TxtExportEvent(object):
-    def __init__(
-        self,
-        group_name: str,
-        event_name: str,
-        value: int,
-        time: float,
-        index: int,
-    ):
-        """
-        Represents an event which was set in the the OpenGo software, and which got
-        exported by the text export. The [time] is the relative time (corresponds to the
-        "time" column), the [index] is the row index according to the numeric
-        measurement data (i.e. you can use this [index] for slicing data).
-        """
-        self.group_name = group_name
-        self.event_name = event_name
-        self.value = value
-        self.time = time
-        self.index = index
+    """
+    Represents an event which was set in the the OpenGo software, and which got
+    exported by the text export. The [time] is the relative time (corresponds to the
+    "time" column), the [index] is the row index according to the numeric
+    measurement data (i.e. you can use this [index] for slicing data).
+    """
+
+    group_name: str
+    event_name: str
+    value: int
+    time: float
+    index: int
 
 
 class Measurement(object):

@@ -5,8 +5,7 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-from moticon_opengo.txt_export import Measurement, TxtExportFileIterator
+from moticon_opengo.txt_export import Measurement, TxtExportEvent, TxtExportFileIterator
 
 # import filecmp
 
@@ -74,6 +73,25 @@ class TestOpenGo(unittest.TestCase):
 
         # filecmp did not work in github actions
         # self.assertTrue(filecmp.cmp(outfile, golden_result))
+
+    def test_import_event_data(self):
+        meas: Measurement = Measurement(
+            os.path.join(dir, "testdata", "walk_data_with_events", "text_export.txt")
+        )
+
+        self.assertIn("Left Events", meas.event_groups)
+        self.assertIn("Right Events", meas.event_groups)
+        self.assertEqual(len(meas.events), 16)
+        self.assertEqual(
+            meas.events[0],
+            TxtExportEvent(
+                event_name="Event",
+                group_name="Left Events",
+                index=20,
+                time=0.21,
+                value=1,
+            ),
+        )
 
 
 if __name__ == "__main__":
