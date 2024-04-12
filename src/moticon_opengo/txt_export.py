@@ -45,6 +45,28 @@ class TxtExportStep(Step):
         self.toe_off_idx: Optional[int] = toe_off_idx
 
 
+class TxtExportEvent(object):
+    def __init__(
+        self,
+        group_name: str,
+        event_name: str,
+        value: int,
+        time: float,
+        index: int,
+    ):
+        """
+        Represents an event which was set in the the OpenGo software, and which got
+        exported by the text export. The [time] is the relative time (corresponds to the
+        "time" column), the [index] is the row index according to the numeric
+        measurement data (i.e. you can use this [index] for slicing data).
+        """
+        self.group_name = group_name
+        self.event_name = event_name
+        self.value = value
+        self.time = time
+        self.index = index
+
+
 class Measurement(object):
     def __init__(self, fname: str, trim: bool = True, fill_method: str = "duplicate"):
         """
@@ -84,12 +106,15 @@ class Measurement(object):
         self._contains_steps_channel: bool = False
         self._first_full_data_column: Dict[Side, int] = dict()
         self._full_data_columns: Dict[Side, List[int]] = dict()
+        self._event_label_column_idx: List[int] = list()  # Each followed by value col.
+        self._value_column_idx: List[int] = list()
+        self.events: List[TxtExportEvent] = list()
 
         self._load_data()
 
     def _load_data(self):
         self._parse_header()
-        self.data = np.genfromtxt(self.fname, delimiter="\t", dtype=None, comments="#")
+        self._load_from_file()
         self._apply_trim()
         self._apply_fill_method()
         self._load_channel_data()
@@ -126,6 +151,8 @@ class Measurement(object):
                 else:
                     self.channel_names = line.split("\t")
 
+        self._detect_event_columns()
+
         # Core sensor insole data channel columns always exported before sparse event
         # channels. Later cannot be used for trimming/filling, as there are always many
         # nan entries.
@@ -134,12 +161,76 @@ class Measurement(object):
                 i
                 for i, n in enumerate(self.channel_names)
                 if n.startswith(f"{side.name.lower()} ")
+                and i not in self._event_label_column_idx
+                and i not in self._value_column_idx
             ]
 
             if col_idx:
                 self._first_full_data_column[side] = col_idx[0]
                 self._full_data_columns[side] = col_idx
                 self.sides.append(side)
+
+    def _detect_event_columns(self):
+        # Events are stored by two columns: An event label column named e.g.
+        # "My Events label[]", followed by an event value column named "My Events[]".
+        self._event_label_column_idx = [
+            i
+            for i, (name, next_name) in enumerate(
+                zip(self.channel_names[:-1], self.channel_names[1:])
+            )
+            if name[:-2] == next_name[:-2] + " label"
+        ]
+
+        self._value_column_idx = [x + 1 for x in self._event_label_column_idx]
+
+    def _load_from_file(self):
+        # Load full file including event columns.
+        dtype = list()
+
+        for i, name in enumerate(self.channel_names):
+            if i not in self._event_label_column_idx:
+                dtype.append((name, float))
+            else:
+                dtype.append((name, "U100"))
+
+        all_data = np.genfromtxt(self.fname, delimiter="\t", dtype=dtype, comments="#")
+
+        # Extract the contained events, and sort by time.
+        for col_idx in self._event_label_column_idx:
+            for i, data_line in enumerate(all_data):
+                if data_line[col_idx]:
+                    self.events.append(
+                        TxtExportEvent(
+                            group_name=self.channel_names[col_idx + 1][:-2],
+                            event_name=data_line[col_idx],
+                            value=data_line[col_idx + 1],
+                            time=data_line[0],
+                            index=i,
+                        )
+                    )
+
+        self.events = sorted(self.events, key=lambda x: x.time)
+
+        # Load file again, this time without event columns.
+        num_cols: int = len(self.channel_names)
+        event_col_idx: List[int] = sorted(
+            self._event_label_column_idx + self._value_column_idx
+        )
+        usecols: List[int] = [i for i in range(num_cols) if i not in event_col_idx]
+
+        self.data = np.genfromtxt(
+            self.fname, delimiter="\t", usecols=usecols, comments="#"
+        )
+
+        # Post-fix column indexes, since [self.data] no longer contains event columns.
+        self.channel_names = [self.channel_names[i] for i in usecols]
+        map: Dict[int, int] = {idx: i for i, idx in enumerate(usecols)}
+
+        for side in Side:
+            self._first_full_data_column[side] = map[self._first_full_data_column[side]]
+            self._full_data_columns[side] = [
+                map[i] for i in self._full_data_columns[side]
+            ]
 
     def _apply_trim(self):
         if not self.trim:
@@ -166,9 +257,14 @@ class Measurement(object):
         # No data remains.
         if idx_start > idx_stop:
             self.data = None
+            self.events = list()
             return
 
         self.data = self.data[idx_start : idx_stop + 1]
+
+        self.events = [
+            x for x in self.events if x.index >= idx_start and x.index <= idx_stop
+        ]
 
     def _apply_fill_method(self):
         if self.data is None or self.fill_method == "keep":
@@ -179,6 +275,18 @@ class Measurement(object):
                 self.data[:, list(self._first_full_data_column.values())]
             ).any(axis=1)
             self.data = self.data[~nan_rows]
+
+            # This will keep all events, but adjust the event's [index] value so it can
+            # still be used for data slicing. However, the event's [time] is kept
+            # unchanged. This may result in multiple events having the same [index] but
+            # different [time].
+            dropped_row_idx = [i for i, x in enumerate(nan_rows) if x]
+
+            for event in self.events:
+                dropped_rows_prior_event = len(
+                    [i for i in dropped_row_idx if i <= event.index]
+                )
+                event.index = max(0, event.index - dropped_rows_prior_event)
 
         elif self.fill_method == "duplicate":
             for side in self.sides:
@@ -200,12 +308,10 @@ class Measurement(object):
         if self.data is None:
             return
 
-        channel_groups = [
+        channel_groups: List[str] = [
             x[: x.find("[")] if x.find("[") != -1 else x for x in self.channel_names
         ]
-        channel_groups: List[str] = [
-            re.sub(r"\s(X|Y|Z|\d+)\s*$", "", x) for x in channel_groups
-        ]
+        channel_groups = [re.sub(r"\s(X|Y|Z|\d+)\s*$", "", x) for x in channel_groups]
         group_selectors: List[List[Union[str, Optional[int]]]] = [
             [channel_groups[0], 0, None]
         ]
@@ -226,7 +332,7 @@ class Measurement(object):
         for sel in group_selectors:
             column_title: str = sel[0]
             side: Side = Side.from_string(column_title.split()[0])
-            group = " ".join(column_title.split()[1:])
+            group: str = " ".join(column_title.split()[1:])
 
             if column_title == "time":
                 self.time = self.data[:, sel[1]]
@@ -267,6 +373,79 @@ class Measurement(object):
     @property
     def has_step_channel(self) -> bool:
         return self._contains_steps_channel
+
+    @property
+    def event_groups(self) -> List[str]:
+        return sorted(list(set([x.group_name for x in self.events])))
+
+    def get_events(
+        self,
+        group_names: List[str] = list(),
+        event_names: List[str] = list(),
+        values: List[int] = list(),
+    ) -> List[TxtExportEvent]:
+        """
+        Return the events which, if given, match the [group_names], [event_names], and
+        [values].
+        """
+        return [
+            x
+            for x in self.events
+            if (not group_names or x.group_name in group_names)
+            and (not event_names or x.event_name in event_names)
+            and (not values or x.value in values)
+        ]
+
+    def get_event_pairs(
+        self,
+        start_group_names: List[str] = list(),
+        start_event_names: List[str] = list(),
+        start_values: List[int] = list(),
+        stop_group_names: List[str] = list(),
+        stop_event_names: List[str] = list(),
+        stop_values: List[int] = list(),
+    ) -> List[List[TxtExportEvent]]:
+        """
+        Return pairs of events for which, if given, the first event matches the
+        [start_group_names], [start_event_names], and [start_values], and the second
+        event matches the [stop_group_names], [stop_event_names], and [stop_values].
+        This is a greedy algorithm, which simply takes the next matching event beginning
+        with the first start event, skipping potential orphan events.
+        """
+        start_events: List[TxtExportEvent] = self.get_events(
+            start_group_names, start_event_names, start_values
+        )
+
+        stop_events: List[TxtExportEvent] = self.get_events(
+            stop_group_names, stop_event_names, stop_values
+        )
+
+        if not start_events or not stop_events:
+            return list()
+
+        event_pairs: List[List[TxtExportEvent]] = list()
+        prev_time = -np.inf
+
+        # We can assume that the events are sorted in time.
+        while True:
+            while start_events and start_events[0].time <= prev_time:
+                del start_events[0]
+
+            if not start_events:
+                break
+
+            prev_time = start_events[0].time
+
+            while stop_events and stop_events[0].time <= prev_time:
+                del stop_events[0]
+
+            if not stop_events:
+                break
+
+            prev_time = stop_events[0].time
+            event_pairs.append([start_events[0], stop_events[0]])
+
+        return event_pairs
 
     def __str__(self) -> str:
         return f"OpenGo Text Export <{self.fname}> {self.name} ({self.tag})"
